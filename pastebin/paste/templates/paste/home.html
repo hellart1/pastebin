@@ -1,0 +1,22 @@
+{% extends 'paste/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="form-group">
+    <form method="POST">
+        {% csrf_token %}
+        <p><textarea id="paste_text" name="paste_text" placeholder="Enter your text here..."></textarea></p>
+        <div class="form-btn">
+            <select name="postform_expiration" id="PostForm[expiration]">
+                <option value="never">Never</option>
+                <option value="burn">Burn after read</option>
+                <option value="10m">10 Minutes</option>
+                <option value="1h">1 Hour</option>
+                <option value="1d">1 Day</option>
+            </select>
+            {{ form.non_field_errors }}
+            <input type="submit" id="btn-submit" class="btn submit" value="Submit">
+        </div>
+    </form>
+</div>
+{% endblock %}

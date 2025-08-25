@@ -1,0 +1,72 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+}
+body {
+    background-color: #FBFAF8;
+}
+
+html {
+    font-size: 110%;
+}
+
+.site-header {
+    font-family: verdana;
+    font-size: 150%;
+    padding: 0 20px;
+    border: 2px solid powderblue;
+}
+
+.header-actions {
+    padding: 0 30px;
+}
+
+.pastepun-logo {
+    width: 300px;
+}
+
+.btn {
+    background-color: #40474c;
+    color: white;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 1.25rem;
+    padding: 10px;
+}
+
+.btn:hover {
+    background-color: #343a3e;
+}
+
+.form-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.submit {
+    font-size: 1rem;
+}
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.form-group {
+    padding: 16px;
+}
+
+#paste_text {
+    padding: 16px;
+    font-size: 150%;
+    height: 250px;
+    width: 100%;
+}
+
+
