@@ -22,10 +22,11 @@ local_settings.py
 .env
 .env.local
 .env.*.local
-.venv
+.venv/
 env/
 venv/
 ENV/
+.virtualenv/
 
 # IDE
 .idea/
