@@ -1,13 +1,45 @@
+import os
+
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from botocore.exceptions import BotoCoreError, ClientError
 from django.db import IntegrityError, DatabaseError
+from django.urls import reverse_lazy
+from django.views.generic import FormView, View
 
 from .forms import TextForm
 from .models import Paste
-from .s3_utils import get_s3_resource, get_unique_hash
+from .s3_utils import ObjectMixin, get_unique_hash, s3_resource
 
+
+class Home(FormView):
+    form_class = TextForm
+    template_name = "paste/home.html"
+    success_url = reverse_lazy('home')
+    context_object_name = "content"
+
+    def form_valid(self, form):
+        paste_text = form.cleaned_data['paste_text']
+        paste_hash = get_unique_hash()
+
+        resource = s3_resource()
+        bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
+        bucket.put_object(
+            Key=f"{paste_hash}.txt",
+            Body=paste_text
+        )
+
+        Paste.objects.create(
+            s3_key=paste_hash
+        )
+
+        return super().form_valid(form)
+
+
+class User_text(View):
+    model = Paste
+    template_name = "paste/user_text.html"
 
 def home(request):
     if request.method == 'POST':
@@ -20,17 +52,17 @@ def home(request):
                 paste_text = form.cleaned_data['paste_text']
                 data_hash = get_unique_hash()
 
-                s3_resource = get_s3_resource()
-                bucket = s3_resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
+                resource = s3_resource()
+                bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
                 bucket.put_object(
                     Key=f"{data_hash}.txt",
                     Body=paste_text,
                 )
 
+
                 # Создание записи в бд
                 Paste.objects.create(
-                    hash=data_hash,
-                    s3_key=f"{data_hash}.txt"
+                    s3_key=data_hash
                 )
 
                 return redirect('user_text', data=data_hash)
@@ -57,8 +89,8 @@ def home(request):
 def user_text(request, data):
     try:
         paste = get_object_or_404(Paste, hash=data)
-        s3_resource = get_s3_resource()
-        bucket = s3_resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
+        resource = s3_resource()
+        bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
         obj = bucket.Object(paste.s3_key)
         content = obj.get()['Body'].read().decode('utf-8')
 

@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Paste(models.Model):
-    hash = models.CharField(max_length=10, unique=True)
+    hash = models.CharField(max_length=10)
     s3_key = models.CharField()
 
     def __str__(self):
