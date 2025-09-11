@@ -18,20 +18,41 @@ class Home(FormView):
     template_name = "paste/home.html"
     success_url = reverse_lazy('home')
     context_object_name = "content"
+    model = Paste
+
+    def put_object_in_s3(self, resource, bucket_name, file_hash, text):
+        bucket = resource.Bucket(bucket_name)
+        return bucket.put_object(
+            Key=f"{file_hash}.txt",
+            Body=text
+        )
+
+    def create_object_in_model(self, model: object, field, obj):
+        return model.objects.create(
+            **{field: obj}
+        )
 
     def form_valid(self, form):
         paste_text = form.cleaned_data['paste_text']
         paste_hash = get_unique_hash()
 
-        resource = s3_resource()
-        bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-        bucket.put_object(
-            Key=f"{paste_hash}.txt",
-            Body=paste_text
+        self.put_object_in_s3(
+            resource=s3_resource(),
+            bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+            file_hash=paste_hash,
+            text=paste_text
         )
+        # resource = s3_resource()
+        # bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
+        # bucket.put_object(
+        #     Key=f"{paste_hash}.txt",
+        #     Body=paste_text
+        # )
 
-        Paste.objects.create(
-            s3_key=paste_hash
+        self.create_object_in_model(
+            model=self.model,
+            field="s3_key",
+            obj=paste_hash
         )
 
         return super().form_valid(form)

@@ -4,29 +4,15 @@
 *.pyc
 __pycache__/
 db.sqlite3
-db.sqlite3-journal
 media/
 staticfiles/
-static/
-collected_static/
-
-# Sensitive files
-*.key
-*.pem
-*.crt
-*.p12
-secrets.json
-local_settings.py
 
 # Environments
 .env
-.env.local
-.env.*.local
-.venv/
+.venv
 env/
 venv/
 ENV/
-.virtualenv/
 
 # IDE
 .idea/
