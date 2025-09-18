@@ -1,5 +1,5 @@
 * {
-  margin: 0;
+  margin: 0px;
   padding: 0;
   box-sizing: border-box;
 
@@ -67,6 +67,10 @@ html {
     font-size: 150%;
     height: 250px;
     width: 100%;
+}
+
+.text-display {
+   
 }
 
 

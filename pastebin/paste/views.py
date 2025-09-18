@@ -6,19 +6,34 @@ from django.conf import settings
 from botocore.exceptions import BotoCoreError, ClientError
 from django.db import IntegrityError, DatabaseError
 from django.urls import reverse_lazy
-from django.views.generic import FormView, View
+from django.views.generic import FormView, View, DetailView
 
 from .forms import TextForm
 from .models import Paste
-from .s3_utils import ObjectMixin, get_unique_hash, s3_resource
+from .s3_utils import ObjectMixin, get_unique_hash, s3_resource, s3_client
+from .utils import StrObjectMixin
 
 
 class Home(FormView):
     form_class = TextForm
     template_name = "paste/home.html"
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('user_text', )
     context_object_name = "content"
     model = Paste
+
+    def create_presigned_post(self, client, bucket_name, object_name, max_size, expiration, fields=None):
+        conditions = [
+            ['content-length-range', 1, max_size]
+        ]
+
+        # try:
+        return client.generate_presigned_post(
+            bucket_name,
+            f"{object_name}.txt",
+            Fields=fields,
+            Conditions=conditions,
+            ExpiresIn=expiration
+        )
 
     def put_object_in_s3(self, resource, bucket_name, file_hash, text):
         bucket = resource.Bucket(bucket_name)
@@ -35,6 +50,8 @@ class Home(FormView):
     def form_valid(self, form):
         paste_text = form.cleaned_data['paste_text']
         paste_hash = get_unique_hash()
+        max_size = 10 * 1024 * 10244
+        lifespan = 3600
 
         self.put_object_in_s3(
             resource=s3_resource(),
@@ -42,25 +59,48 @@ class Home(FormView):
             file_hash=paste_hash,
             text=paste_text
         )
-        # resource = s3_resource()
-        # bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-        # bucket.put_object(
-        #     Key=f"{paste_hash}.txt",
-        #     Body=paste_text
-        # )
+
+        self.create_presigned_post(
+            client=s3_client(),
+            bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+            object_name=f"{paste_hash}.txt",
+            max_size=max_size,
+            expiration=lifespan
+        )
 
         self.create_object_in_model(
             model=self.model,
-            field="s3_key",
+            field="hash",
             obj=paste_hash
         )
 
         return super().form_valid(form)
 
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     context['post'] = self.download_from_s3(key=)
 
-class User_text(View):
+
+
+class User_text(DetailView):
     model = Paste
     template_name = "paste/user_text.html"
+    context_object_name = 'post'
+
+    def get_object_from_s3(self, resource, bucket_name, s3_key):
+        bucket = resource.Bucket(bucket_name)
+        obj = bucket.Object(f"{s3_key}.txt")
+        return obj.get()['Body'].read().decode('utf-8')
+
+    def get_object(self, queryset=None):
+        data_param = self.kwargs.get("data")
+
+        if self.model.objects.get(hash=data_param):
+            return self.get_object_from_s3(
+                resource=s3_resource(),
+                bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+                s3_key=data_param
+            )
 
 def home(request):
     if request.method == 'POST':

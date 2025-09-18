@@ -6,5 +6,5 @@ urlpatterns = [
     # path('', views.home, name='home'),
     path('', Home.as_view(), name='home'),
     # path('user_text/<str:data>', User_text.as_view(), name='user_text'),
-    path('user_text/<str:data>', views.user_text, name='user_text'),
+    path('user_text/<str:data>', User_text.as_view(), name='user_text'),
 ]
