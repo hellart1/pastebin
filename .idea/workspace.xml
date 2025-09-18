@@ -4,16 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="02a8696e-412f-4270-8927-50fbbc936ce0" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/db.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/s3_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/s3_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/static/paste/css/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/static/paste/css/styles.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/templates/paste/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/templates/paste/home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/templates/paste/user_text.html" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/templates/paste/user_text.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/views.py" afterDir="false" />
-    </list>
+    <list default="true" id="02a8696e-412f-4270-8927-50fbbc936ce0" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
