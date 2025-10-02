@@ -1,12 +1,13 @@
 import os
+import requests
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from botocore.exceptions import BotoCoreError, ClientError
 from django.db import IntegrityError, DatabaseError
-from django.urls import reverse_lazy
-from django.views.generic import FormView, View, DetailView
+from django.urls import reverse_lazy, reverse
+from django.views.generic import FormView, View, DetailView, TemplateView
 
 from .forms import TextForm
 from .models import Paste
@@ -17,23 +18,24 @@ from .utils import StrObjectMixin
 class Home(FormView):
     form_class = TextForm
     template_name = "paste/home.html"
-    success_url = reverse_lazy('user_text', )
-    context_object_name = "content"
     model = Paste
+    context_object_name = "content"
 
-    def create_presigned_post(self, client, bucket_name, object_name, max_size, expiration, fields=None):
-        conditions = [
-            ['content-length-range', 1, max_size]
-        ]
+    def get_success_url(self):
+        return reverse_lazy('user_text', kwargs={'data': self.paste_hash})
 
-        # try:
-        return client.generate_presigned_post(
-            bucket_name,
-            f"{object_name}.txt",
-            Fields=fields,
-            Conditions=conditions,
-            ExpiresIn=expiration
-        )
+    def create_presigned_url(self, client, bucket_name, object_name, expiration):
+
+        try:
+            return client.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={'Bucket': bucket_name, 'Key': object_name},
+                ExpiresIn=expiration
+            )
+
+        except ClientError as e:
+        # logging.error(e)
+            return None
 
     def put_object_in_s3(self, resource, bucket_name, file_hash, text):
         bucket = resource.Bucket(bucket_name)
@@ -42,44 +44,35 @@ class Home(FormView):
             Body=text
         )
 
-    def create_object_in_model(self, model: object, field, obj):
-        return model.objects.create(
-            **{field: obj}
-        )
 
     def form_valid(self, form):
         paste_text = form.cleaned_data['paste_text']
-        paste_hash = get_unique_hash()
-        max_size = 10 * 1024 * 10244
-        lifespan = 3600
+        self.paste_hash = get_unique_hash()
+        # max_size = 10 * 1024 * 10244
+        lifespan = form.cleaned_data['expiration']
+        # lifespan = 10
 
         self.put_object_in_s3(
             resource=s3_resource(),
             bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-            file_hash=paste_hash,
+            file_hash=self.paste_hash,
             text=paste_text
         )
 
-        self.create_presigned_post(
+        presigned_url = self.create_presigned_url(
             client=s3_client(),
             bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-            object_name=f"{paste_hash}.txt",
-            max_size=max_size,
+            object_name=f"{self.paste_hash}.txt",
             expiration=lifespan
         )
 
-        self.create_object_in_model(
-            model=self.model,
-            field="hash",
-            obj=paste_hash
-        )
+        self.model.objects.create(hash=self.paste_hash, url=presigned_url)
 
         return super().form_valid(form)
 
     # def get_context_data(self, **kwargs):
     #     context = super().get_context_data(**kwargs)
     #     context['post'] = self.download_from_s3(key=)
-
 
 
 class User_text(DetailView):
@@ -94,73 +87,35 @@ class User_text(DetailView):
 
     def get_object(self, queryset=None):
         data_param = self.kwargs.get("data")
+        user_object = self.model.objects.get(hash=data_param)
 
-        if self.model.objects.get(hash=data_param):
-            return self.get_object_from_s3(
-                resource=s3_resource(),
-                bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-                s3_key=data_param
-            )
-
-def home(request):
-    if request.method == 'POST':
-        # Создание текста формы из запроса
-        form = TextForm(request.POST or None)
-        # Проверка валидности формы
-        if form.is_valid():
-            try:
-                # Передача текста в переменную из textarea
-                paste_text = form.cleaned_data['paste_text']
-                data_hash = get_unique_hash()
-
-                resource = s3_resource()
-                bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-                bucket.put_object(
-                    Key=f"{data_hash}.txt",
-                    Body=paste_text,
-                )
+        if user_object:
+            content = requests.get(user_object.url)
+            if content.status_code == 200:
+                return content.text
+            else:
+                raise Http404
 
 
-                # Создание записи в бд
-                Paste.objects.create(
-                    s3_key=data_hash
-                )
+class ErrorView(TemplateView):
+    template_name = 'error.html'
 
-                return redirect('user_text', data=data_hash)
-            except (BotoCoreError, ClientError) as e:
-                # Ошибка загрузки в AWS
-                # logger
-                form.add_error(None, "Loading error. Try later")
-            except (IntegrityError, DatabaseError) as e:
-                # logger
-                form.add_error(None, 'Database error. Try later')
-            except (ValueError) as e:
-                # Ошибка конфигурации AWS или генерации хэша
-                # logger
-                form.add_error(None, 'Service configuration error. Try later')
-            except Exception as e:
-                form.add_error(None, 'Unexpected error. Try later')
-    else:
-        # Создание пустой формы если например 'GET' запрос
-        form = TextForm()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['message'] = self.get_error_message(context['status_code'])
 
-    return render(request, 'paste/home.html', {'form': form})
+        return context
 
-
-def user_text(request, data):
-    try:
-        paste = get_object_or_404(Paste, hash=data)
-        resource = s3_resource()
-        bucket = resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-        obj = bucket.Object(paste.s3_key)
-        content = obj.get()['Body'].read().decode('utf-8')
-
-        context = {
-            'content': content,
+    def get_error_message(self, status_code):
+        messages = {
+            404: 'Page not found',
+            500: 'Server error',
+            403: 'Forbidden',
         }
 
-        return render(request, 'paste/user_text.html', context=context)
-    except (BotoCoreError, ClientError) as e:
-        # logger
-        return render(request, 'paste/error.html',
-                      context={'error': 'Не удалось загрузить содержимое'})
+        return messages.get(status_code, 'Something went wrong')
+
+    def render_to_response(self, context, **response_kwargs):
+        response_kwargs['status'] = context['status_code']
+
+        return super().render_to_response(context, **response_kwargs)

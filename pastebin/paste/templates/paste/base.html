@@ -5,20 +5,23 @@
     <meta charset="UTF-8">
     <title>Pastepun</title>
     <link rel="stylesheet" href="{% static 'paste/css/styles.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<header class="site-header">
-    <div class="container">
-        <a class="header-logo" href="{% url 'home' %}">
-            <img src="{% static 'paste/images/pastepun-logo.svg' %}" alt="Pastepun" class="pastepun-logo">
-        </a>
-        <div class="header-actions">
-            <button class="btn reg">Create new</button>
-            <button class="btn auth">Sign in</button>
-        </div>
-    </div>
-</header>
 <body>
-    {% block content %}
-    {% endblock %}
+    <header class="header">
+        <div class="container">
+            <a class="header-logo" href="{% url 'home' %}">
+                <img src="{% static 'paste/images/pastepun-logo.svg' %}" alt="Pastepun" class="pastepun-logo">
+            </a>
+            <div class="header-actions">
+                <button class="btn reg" onclick="document.location='{% url 'users:signup' %}'">Create new</button>
+                <button class="btn auth" onclick="document.location='{% url 'users:login' %}'">Sign in</button>
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
 </body>
 </html>

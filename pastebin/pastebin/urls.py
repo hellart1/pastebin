@@ -16,8 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from paste.views import ErrorView
+
+handler404 = ErrorView.as_view(template_name='error.html', extra_context={'status_code': 404})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('paste.urls'))
+    path('', include('paste.urls')),
+    path('', include('users.urls', namespace='users'))
 ]

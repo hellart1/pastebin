@@ -89,7 +89,7 @@ def get_unique_hash():
         coded_bytes.replace('=', '')
         _hash = coded_bytes[:7]
 
-        if not Paste.objects.filter(s3_key=_hash).exists():
+        if not Paste.objects.filter(hash=_hash).exists():
             return _hash
 
     raise ValueError("Не удалось найти уникальный хэш. Повторите позже")
