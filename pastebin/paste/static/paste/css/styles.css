@@ -1,3 +1,4 @@
+/* Общие настройки проекта */
 * {
   margin: 0px;
   padding: 0;
@@ -18,16 +19,6 @@ html {
     border: 2px solid powderblue;
 }
 
-.container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 .header-actions {
     padding: 0 30px;
 }
@@ -36,9 +27,14 @@ html {
     width: 300px;
 }
 
-.text-content {
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
-    height: auto;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .btn {
@@ -74,14 +70,31 @@ html {
 }
 
 .form-group {
-    padding: 16px;
+    width: 100%;
+    padding: 10px;
 }
 
 #paste_text {
+    width: 100%;
+    max-width: 1200px;
     padding: 16px;
     font-size: 150%;
     height: 250px;
+    margin: 0 auto;
+    overflow: auto;
+    resize: vertical;
+}
+
+.user_text {
+    display: block;
+    padding: 16px;
+    font-size: 150%;
+    resize: vertical;
     width: 1200px;
+}
+
+.form-label {
+    display: block;
 }
 
 

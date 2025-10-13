@@ -14,8 +14,13 @@
                 <img src="{% static 'paste/images/pastepun-logo.svg' %}" alt="Pastepun" class="pastepun-logo">
             </a>
             <div class="header-actions">
+                {% if user.is_authenticated %}
+                {{user.username}}
+                <a href="{% url 'users:logout' %}">Sign out</a>
+                {% else %}
                 <button class="btn reg" onclick="document.location='{% url 'users:signup' %}'">Create new</button>
                 <button class="btn auth" onclick="document.location='{% url 'users:login' %}'">Sign in</button>
+                {% endif %}
             </div>
         </div>
     </header>

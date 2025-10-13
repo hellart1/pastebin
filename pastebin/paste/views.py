@@ -1,5 +1,6 @@
 import os
 import requests
+from django.forms import model_to_dict
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render, redirect, get_object_or_404
@@ -8,10 +9,14 @@ from botocore.exceptions import BotoCoreError, ClientError
 from django.db import IntegrityError, DatabaseError
 from django.urls import reverse_lazy, reverse
 from django.views.generic import FormView, View, DetailView, TemplateView
+from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from .forms import TextForm
 from .models import Paste
-from .s3_utils import ObjectMixin, get_unique_hash, s3_resource, s3_client
+from .s3_utils import get_unique_hash, s3_resource, s3_client
+from .serializers import PasteSerializer
 from .utils import StrObjectMixin
 
 
@@ -119,3 +124,15 @@ class ErrorView(TemplateView):
         response_kwargs['status'] = context['status_code']
 
         return super().render_to_response(context, **response_kwargs)
+
+
+class ModelAPIView(APIView):
+    def get(self, request):
+        lst = Paste.objects.all().values()
+        return Response({'post': list(lst)})
+
+    def post(self, request):
+        post_new = Paste.objects.create(
+            hash=request.data['hash']
+        )
+        return Response({'post': model_to_dict(post_new)})

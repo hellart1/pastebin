@@ -4,26 +4,35 @@
         <div class="form-group">
             <h2>Регистрация</h2>
             <form action="" method="post">
-                    <div class="form-group">
-                        <label for="name">Имя:</label>
-                        <input type="text" id="name" name="name" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Электронная почта:</label>
-                        <input type="email" id="email" class="form-control" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Пароль:</label>
-                        <input type="password" id="password" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm_password">Повторите пароль:</label>
-                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="submit" id="submit" name="submit" class="btn btn-primary" value="Зарегистрироваться">
-                    </div>
-                    <p>Уже зарегистрированы? <a href="{% url 'users:login' %}">Войдите в систему</a>.</p>
-                </form>
+                {% csrf_token %}
+                <div class="form-error">{{ form.non_field_errors }}</div>
+                {% for f in form %}
+                <div class="form-group">
+                    <p><label class='form-label' for="{{ f.id_for_label }}">{{f.label}}</label></p>{{f}}
+                    <div class="form-error">{{ f.errors }}</div>
+                </div>
+                {% endfor %}
+                <input type="submit" name="submit" class="btn" value="Зарегистрироваться">
+<!--                <div class="form-group">-->
+<!--                    <label for="username">Имя:</label>-->
+<!--                    <input type="text" id="username" name="username" class="form-control" value="pure" required>-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="email">Электронная почта:</label>-->
+<!--                    <input type="text" id="email" name="email" class="form-control" value="pune@mail.ru" required>-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="password">Пароль:</label>-->
+<!--                    <input type="password" id="password" name="password" class="form-control" value="123456" required>-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="password2">Повторите пароль:</label>-->
+<!--                    <input type="password" id="password2" name="password2"  class="form-control" value="123456" required>-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <input type="submit" id="submit" name="submit" class="btn btn-primary" value="Зарегистрироваться">-->
+<!--                </div>-->
+                <p>Уже зарегистрированы? <a href="{% url 'users:login' %}">Войдите в систему</a>.</p>
+            </form>
         </div>
 {% endblock %}
