@@ -142,5 +142,15 @@ LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'home'
 
+# REST settings
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        # del on prod:
+        'rest_framework.renderers.BrowsableAPIRenderer'
+    ]
+}
+
 
 

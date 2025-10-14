@@ -39,7 +39,7 @@ class Home(FormView):
             )
 
         except ClientError as e:
-        # logging.error(e)
+            # logging.error(e)
             return None
 
     def put_object_in_s3(self, resource, bucket_name, file_hash, text):
@@ -48,7 +48,6 @@ class Home(FormView):
             Key=f"{file_hash}.txt",
             Body=text
         )
-
 
     def form_valid(self, form):
         paste_text = form.cleaned_data['paste_text']
@@ -126,13 +125,52 @@ class ErrorView(TemplateView):
         return super().render_to_response(context, **response_kwargs)
 
 
+class PasteAPIList(generics.ListCreateAPIView):
+    queryset = Paste.objects.all()
+    serializer_class = PasteSerializer
+
+
 class ModelAPIView(APIView):
     def get(self, request):
-        lst = Paste.objects.all().values()
-        return Response({'post': list(lst)})
+        lst = Paste.objects.all()
+        return Response({'post': PasteSerializer(lst, many=True).data})
 
     def post(self, request):
-        post_new = Paste.objects.create(
-            hash=request.data['hash']
-        )
-        return Response({'post': model_to_dict(post_new)})
+        sr_data = PasteSerializer(data=request.data)
+        sr_data.is_valid(raise_exception=True)
+        sr_data.save()
+
+        return Response({'post': sr_data.data})
+
+    def put(self, request, *args, **kwargs):
+        pk = kwargs.get('pk', None)
+
+        if not pk:
+            return Response({'error': 'Method PUT not allowed'})
+
+        try:
+            instance = Paste.objects.get(pk=pk)
+        except:
+            return Response({'error': 'Object does not exists'})
+
+        serializer = PasteSerializer(data=request.data, instance=instance)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({'post': serializer.data})
+
+    def delete(self, request, *args, **kwargs):
+        pk = kwargs.get("pk", None)
+
+        if not pk:
+            return Response({'error': 'Method PUT not allowed'})
+
+        try:
+            obj = Paste.objects.get(pk=pk)
+            obj.delete()
+        except:
+            return Response({'error': 'Object does not exists'})
+
+        return Response({'post': 'delete post' + str(pk)})
+
+
