@@ -70,7 +70,7 @@ class Home(FormView):
             expiration=lifespan
         )
 
-        self.model.objects.create(hash=self.paste_hash, url=presigned_url)
+        self.model.objects.create(hash=self.paste_hash, url=presigned_url, expiration_type=lifespan)
 
         return super().form_valid(form)
 
@@ -84,21 +84,31 @@ class User_text(DetailView):
     template_name = "paste/user_text.html"
     context_object_name = 'post'
 
-    def get_object_from_s3(self, resource, bucket_name, s3_key):
-        bucket = resource.Bucket(bucket_name)
-        obj = bucket.Object(f"{s3_key}.txt")
-        return obj.get()['Body'].read().decode('utf-8')
+    # def get_object_from_s3(self, resource, bucket_name, s3_key):
+    #     bucket = resource.Bucket(bucket_name)
+    #     obj = bucket.Object(f"{s3_key}.txt")
+    #     return obj.get()['Body'].read().decode('utf-8')
 
     def get_object(self, queryset=None):
-        data_param = self.kwargs.get("data")
-        user_object = self.model.objects.get(hash=data_param)
+        endpoint = reverse('paste_api', kwargs={'hash': self.kwargs.get('data')})
+        response = requests.get(
+            self.request.build_absolute_uri(endpoint)
+        ).json()
 
-        if user_object:
-            content = requests.get(user_object.url)
-            if content.status_code == 200:
-                return content.text
-            else:
-                raise Http404
+        content = requests.get(response['download_url'])
+        if content.status_code == 200:
+            return content.text
+        else:
+            raise Http404
+        # data_param = self.kwargs.get("data")
+        # user_object = self.model.objects.get(hash=data_param)
+        #
+        # if user_object:
+        #     content = requests.get(user_object.url)
+        #     if content.status_code == 200:
+        #         return content.text
+        #     else:
+        #         raise Http404
 
 
 class ErrorView(TemplateView):
@@ -125,52 +135,31 @@ class ErrorView(TemplateView):
         return super().render_to_response(context, **response_kwargs)
 
 
-class PasteAPIList(generics.ListCreateAPIView):
+class PasteAPIList(generics.RetrieveAPIView):
     queryset = Paste.objects.all()
     serializer_class = PasteSerializer
+    lookup_field = 'hash'
 
-
-class ModelAPIView(APIView):
-    def get(self, request):
-        lst = Paste.objects.all()
-        return Response({'post': PasteSerializer(lst, many=True).data})
-
-    def post(self, request):
-        sr_data = PasteSerializer(data=request.data)
-        sr_data.is_valid(raise_exception=True)
-        sr_data.save()
-
-        return Response({'post': sr_data.data})
-
-    def put(self, request, *args, **kwargs):
-        pk = kwargs.get('pk', None)
-
-        if not pk:
-            return Response({'error': 'Method PUT not allowed'})
-
+    def create_presigned_url(self, client, bucket_name, object_name, expiration):
         try:
-            instance = Paste.objects.get(pk=pk)
-        except:
-            return Response({'error': 'Object does not exists'})
+            return client.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={'Bucket': bucket_name, 'Key': object_name},
+                ExpiresIn=expiration
+            )
 
-        serializer = PasteSerializer(data=request.data, instance=instance)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        except ClientError as e:
+            # logging.error(e)
+            return None
 
-        return Response({'post': serializer.data})
+    def retrieve(self, request, *args, **kwargs):
+        obj = self.get_object()
+        presigned_url = self.create_presigned_url(
+            client=s3_client(),
+            bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+            object_name=f"{self.kwargs.get("hash")}.txt",
+            expiration=obj.expiration_type
+        )
 
-    def delete(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
-
-        if not pk:
-            return Response({'error': 'Method PUT not allowed'})
-
-        try:
-            obj = Paste.objects.get(pk=pk)
-            obj.delete()
-        except:
-            return Response({'error': 'Object does not exists'})
-
-        return Response({'post': 'delete post' + str(pk)})
-
-
+        serializer = self.get_serializer_class()(obj, context={'download_url': presigned_url})
+        return Response(serializer.data)
