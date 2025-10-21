@@ -9,7 +9,7 @@ class PasteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Paste
-        fields = ('hash', 'url', 'expiration_type', 'download_url')
+        fields = ('hash', 'expiration_type', 'download_url')
 
     def get_download_url(self, obj):
         return self.context.get('download_url')

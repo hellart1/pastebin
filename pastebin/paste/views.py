@@ -1,5 +1,7 @@
+import datetime
 import os
 import requests
+from datetime import timedelta, datetime
 from django.forms import model_to_dict
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404
@@ -50,11 +52,13 @@ class Home(FormView):
         )
 
     def form_valid(self, form):
+        print('form_valid')
         paste_text = form.cleaned_data['paste_text']
         self.paste_hash = get_unique_hash()
         # max_size = 10 * 1024 * 10244
         lifespan = form.cleaned_data['expiration']
         # lifespan = 10
+        print(self.paste_hash, lifespan)
 
         self.put_object_in_s3(
             resource=s3_resource(),
@@ -62,16 +66,10 @@ class Home(FormView):
             file_hash=self.paste_hash,
             text=paste_text
         )
+        print('put_object_in_s3')
 
-        presigned_url = self.create_presigned_url(
-            client=s3_client(),
-            bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-            object_name=f"{self.paste_hash}.txt",
-            expiration=lifespan
-        )
-
-        self.model.objects.create(hash=self.paste_hash, url=presigned_url, expiration_type=lifespan)
-
+        self.model.objects.create(hash=self.paste_hash, expiration_type=lifespan)
+        print('создался обьект в бд')
         return super().form_valid(form)
 
     # def get_context_data(self, **kwargs):
@@ -94,21 +92,16 @@ class User_text(DetailView):
         response = requests.get(
             self.request.build_absolute_uri(endpoint)
         ).json()
-
-        content = requests.get(response['download_url'])
-        if content.status_code == 200:
-            return content.text
-        else:
+        print(response)
+        if 'download_url' not in response:
+            print('Нет download_url в json ответе')
             raise Http404
-        # data_param = self.kwargs.get("data")
-        # user_object = self.model.objects.get(hash=data_param)
-        #
-        # if user_object:
-        #     content = requests.get(user_object.url)
-        #     if content.status_code == 200:
-        #         return content.text
-        #     else:
-        #         raise Http404
+        else:
+            content = requests.get(response['download_url'])
+            if content.status_code == 200:
+                return content.text
+            else:
+                raise Http404
 
 
 class ErrorView(TemplateView):
@@ -152,14 +145,33 @@ class PasteAPIList(generics.RetrieveAPIView):
             # logging.error(e)
             return None
 
+    def check_expired(self, obj):
+        expiration_delta = {
+            'N': 'never',
+            'B': 'burn_after_read',
+            '10M': timedelta(minutes=10),
+            '1H': timedelta(hours=1),
+            '1D': timedelta(days=1),
+        }
+        expiration = expiration_delta[obj.expiration_type]
+
+        # если отправить запрос за 5 секунд до конца действия ссылки, она еще будет действовать 10 минут
+        return datetime.now().timestamp() < (obj.created_at + expiration_delta[obj.expiration_type]).timestamp()
+
     def retrieve(self, request, *args, **kwargs):
         obj = self.get_object()
-        presigned_url = self.create_presigned_url(
-            client=s3_client(),
-            bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-            object_name=f"{self.kwargs.get("hash")}.txt",
-            expiration=obj.expiration_type
-        )
+        # если срок действия истек, raise 404
+        # иначе создаем ссылку
+        if self.check_expired(obj):
+            presigned_url = self.create_presigned_url(
+                client=s3_client(),
+                bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+                object_name=f"{self.kwargs.get("hash")}.txt",
+                expiration=600
+            )
+        else:
+            print('Срок действия истек')
+            return Response(status=404)
 
         serializer = self.get_serializer_class()(obj, context={'download_url': presigned_url})
         return Response(serializer.data)

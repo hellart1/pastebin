@@ -9,11 +9,11 @@
         <p><textarea id="paste_text" name="paste_text" placeholder="Enter your text here..." required></textarea></p>
         <div class="form-btn">
             <select name="expiration" id="PostForm[expiration]">
-                <option value="never">Never</option>
-                <option value="burn">Burn after read</option>
-                <option value="600" selected>10 Minutes</option>
-                <option value="3600">1 Hour</option>
-                <option value="86400">1 Day</option>
+                <option value="N">Never</option>
+                <option value="B">Burn after read</option>
+                <option value="10M" selected>10 Minutes</option>
+                <option value="1H">1 Hour</option>
+                <option value="1D">1 Day</option>
             </select>
             {{ form.non_field_errors }}
             <input type="submit" id="btn-submit" class="btn submit" value="Submit">
