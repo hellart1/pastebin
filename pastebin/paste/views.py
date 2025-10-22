@@ -31,18 +31,18 @@ class Home(FormView):
     def get_success_url(self):
         return reverse_lazy('user_text', kwargs={'data': self.paste_hash})
 
-    def create_presigned_url(self, client, bucket_name, object_name, expiration):
-
-        try:
-            return client.generate_presigned_url(
-                ClientMethod='get_object',
-                Params={'Bucket': bucket_name, 'Key': object_name},
-                ExpiresIn=expiration
-            )
-
-        except ClientError as e:
-            # logging.error(e)
-            return None
+    # def create_presigned_url(self, client, bucket_name, object_name, expiration):
+    #
+    #     try:
+    #         return client.generate_presigned_url(
+    #             ClientMethod='get_object',
+    #             Params={'Bucket': bucket_name, 'Key': object_name},
+    #             ExpiresIn=expiration
+    #         )
+    #
+    #     except ClientError as e:
+    #         # logging.error(e)
+    #         return None
 
     def put_object_in_s3(self, resource, bucket_name, file_hash, text):
         bucket = resource.Bucket(bucket_name)
@@ -92,7 +92,7 @@ class User_text(DetailView):
         response = requests.get(
             self.request.build_absolute_uri(endpoint)
         ).json()
-        print(response)
+
         if 'download_url' not in response:
             print('Нет download_url в json ответе')
             raise Http404
@@ -102,6 +102,60 @@ class User_text(DetailView):
                 return content.text
             else:
                 raise Http404
+
+
+class PasteAPIList(generics.RetrieveAPIView):
+    queryset = Paste.objects.all()
+    serializer_class = PasteSerializer
+    lookup_field = 'hash'
+
+    def create_presigned_url(self, client, bucket_name, object_name, expiration):
+        try:
+            return client.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={'Bucket': bucket_name, 'Key': object_name},
+                ExpiresIn=expiration
+            )
+
+        except ClientError as e:
+            print("ошибка клиента")
+            # logging.error(e)
+            return None
+
+    def check_expired(self, obj):
+        expiration_delta = {
+            'N': 'never',
+            'B': 'burn_after_read',
+            '10M': timedelta(minutes=10),
+            '1H': timedelta(hours=1),
+            '1D': timedelta(days=1),
+        }
+        expiration = expiration_delta[obj.expiration_type]
+        print(type(obj.created_at))
+        print(type(datetime.now()))
+        # created_at = datetime.strptime(obj.created_at, "%Y-%m-%d %H:%M:%S")
+
+        # если отправить запрос за 5 секунд до конца действия ссылки, она еще будет действовать 10 минут
+        return datetime.now().timestamp() < (obj.created_at + expiration).timestamp()
+
+    def retrieve(self, request, *args, **kwargs):
+        obj = self.get_object()
+        # если срок действия истек, raise 404
+        # иначе создаем ссылку
+        if self.check_expired(obj):
+            presigned_url = self.create_presigned_url(
+                client=s3_client(),
+                bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+                object_name=f"{self.kwargs.get("hash")}.txt",
+                expiration=600
+            )
+
+        else:
+            print('Срок действия истек')
+            return Response(status=404)
+
+        serializer = self.get_serializer_class()(obj, context={'download_url': presigned_url})
+        return Response(serializer.data)
 
 
 class ErrorView(TemplateView):
@@ -126,52 +180,3 @@ class ErrorView(TemplateView):
         response_kwargs['status'] = context['status_code']
 
         return super().render_to_response(context, **response_kwargs)
-
-
-class PasteAPIList(generics.RetrieveAPIView):
-    queryset = Paste.objects.all()
-    serializer_class = PasteSerializer
-    lookup_field = 'hash'
-
-    def create_presigned_url(self, client, bucket_name, object_name, expiration):
-        try:
-            return client.generate_presigned_url(
-                ClientMethod='get_object',
-                Params={'Bucket': bucket_name, 'Key': object_name},
-                ExpiresIn=expiration
-            )
-
-        except ClientError as e:
-            # logging.error(e)
-            return None
-
-    def check_expired(self, obj):
-        expiration_delta = {
-            'N': 'never',
-            'B': 'burn_after_read',
-            '10M': timedelta(minutes=10),
-            '1H': timedelta(hours=1),
-            '1D': timedelta(days=1),
-        }
-        expiration = expiration_delta[obj.expiration_type]
-
-        # если отправить запрос за 5 секунд до конца действия ссылки, она еще будет действовать 10 минут
-        return datetime.now().timestamp() < (obj.created_at + expiration_delta[obj.expiration_type]).timestamp()
-
-    def retrieve(self, request, *args, **kwargs):
-        obj = self.get_object()
-        # если срок действия истек, raise 404
-        # иначе создаем ссылку
-        if self.check_expired(obj):
-            presigned_url = self.create_presigned_url(
-                client=s3_client(),
-                bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-                object_name=f"{self.kwargs.get("hash")}.txt",
-                expiration=600
-            )
-        else:
-            print('Срок действия истек')
-            return Response(status=404)
-
-        serializer = self.get_serializer_class()(obj, context={'download_url': presigned_url})
-        return Response(serializer.data)

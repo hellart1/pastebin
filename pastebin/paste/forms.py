@@ -4,6 +4,6 @@ from django.contrib.auth.forms import UserCreationForm
 
 class TextForm(forms.Form):
     paste_text = forms.CharField()
-    expiration = forms.IntegerField()
+    expiration = forms.CharField()
 
 
