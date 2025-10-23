@@ -6,12 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="02a8696e-412f-4270-8927-50fbbc936ce0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/migrations/0001_initial.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/migrations/0002_remove_paste_url.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/paste/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pastebin/paste/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pastebin/paste/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/paste/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pastebin/users/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/pastebin/users/forms.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -205,15 +201,6 @@
     </option>
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/pastebin/paste/views.py</url>
-          <line>24</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="form.base_fields['password']" />
