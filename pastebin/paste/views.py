@@ -78,56 +78,16 @@ class User_text(DetailView):
             print(f'Ошибка: {e}')
 
 
-class PasteAPIList(S3UtilsMixin, generics.RetrieveAPIView):
+class PasteAPIList(PasteExpirationMixin, generics.RetrieveAPIView):
     queryset = Paste.objects.all()
     serializer_class = PasteSerializer
     lookup_field = 'hash'
 
-    def get_expiration_seconds(self, obj):
-        expiration_delta = {
-            '10M': timedelta(minutes=10),
-            '1H': timedelta(hours=1),
-            '1D': timedelta(days=1),
-        }
-        expiration = expiration_delta[obj.expiration_type]
-
-        created_time = obj.created_at.timestamp()
-        time_now = datetime.now().timestamp()
-
-        return created_time + expiration.total_seconds() - time_now
-
-    def check_expired(self, obj):
-        expiration_delta = {
-            '10M': timedelta(minutes=10),
-            '1H': timedelta(hours=1),
-            '1D': timedelta(days=1),
-        }
-        if obj.expiration_type == 'N':
-            return None
-        elif obj.expiration_type == 'B':
-            return None
-        expiration = expiration_delta[obj.expiration_type]
-
-        # если отправить запрос за 5 секунд до конца действия ссылки, она еще будет действовать 10 минут
-        # идея: подключить redis для кэширования ссылки вместо постоянного запроса новой
-        time_now = datetime.now().timestamp()
-        created_time = (obj.created_at + expiration).timestamp()
-        if time_now < created_time:
-            return self.get_expiration_seconds(obj)
-
     def retrieve(self, request, *args, **kwargs):
         obj = self.get_object()
-        expiration_time = self.check_expired(obj)
-
-        if obj.expiration_type == 'N':
-            presigned_url = self.create_presigned_url(obj.hash)
-        elif expiration_time:
-            presigned_url = self.create_presigned_url(obj.hash, expiration_time)
-        else:
-            print('Срок действия пасты истек')
-            return Response(status=404)
-
+        presigned_url = self.expiration_handler(obj)
         serializer = self.get_serializer_class()(obj, context={'download_url': presigned_url})
+
         return Response(serializer.data)
 
 

@@ -1,9 +1,11 @@
 import os
+from datetime import timedelta, datetime
 
 import boto3
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.views.generic.detail import SingleObjectMixin
+from rest_framework.response import Response
 
 
 class S3ConnectMixin:
@@ -41,7 +43,7 @@ class S3UtilsMixin(S3ConnectMixin):
             return None
 
     def create_presigned_url(
-            self, object_name, client=None, bucket_name=settings.AWS_STORAGE_BUCKET_NAME, expiration=None
+            self, object_name, expiration=None, client=None, bucket_name=settings.AWS_STORAGE_BUCKET_NAME
     ):
         client = client or self.s3_client()
         print(client)
@@ -57,6 +59,84 @@ class S3UtilsMixin(S3ConnectMixin):
             print("ошибка клиента")
             # logging.error(e)
             return None
+
+
+class PasteExpirationMixin(S3UtilsMixin):
+    def expiration_handler(self, obj):
+        handlers = {
+            'N': self.handler_never_expire,
+            'B': self.handler_burn_after_read,
+            '10M': self.handler_timed_expire,
+            '1H': self.handler_timed_expire,
+            '1D': self.handler_timed_expire
+        }
+
+        handler = handlers.get(obj.expiration_type)
+        if handler:
+            return handler(obj)
+
+    def handler_never_expire(self, obj):
+        return self.create_presigned_url(object_name=obj.hash)
+
+    def handler_burn_after_read(self, obj):
+        pass
+
+    def handler_timed_expire(self, obj):
+        expiration_delta = {
+            '10M': timedelta(minutes=10),
+            '1H': timedelta(hours=1),
+            '1D': timedelta(days=1),
+        }
+
+        expiration = expiration_delta[obj.expiration_type].total_seconds()
+
+        # идея: подключить redis для кэширования ссылки вместо постоянного запроса новой
+        time_now = datetime.now().timestamp()
+        created_time = obj.created_at.timestamp()
+
+        if time_now < (created_time + expiration):
+            lifespan_remain = created_time + expiration - time_now
+            return self.create_presigned_url(
+                object_name=obj,
+                expiration=lifespan_remain
+            )
+        else:
+            print('Срок действия пасты истек')
+            return Response(status=404)
+
+    def get_expiration_seconds(self, obj):
+        expiration_delta = {
+            '10M': timedelta(minutes=10),
+            '1H': timedelta(hours=1),
+            '1D': timedelta(days=1),
+        }
+        expiration = expiration_delta[obj.expiration_type]
+
+        created_time = obj.created_at.timestamp()
+        time_now = datetime.now().timestamp()
+
+        return created_time + expiration.total_seconds() - time_now
+
+
+
+    # def check_expired(self, obj):
+    #     expiration_delta = {
+    #         '10M': timedelta(minutes=10),
+    #         '1H': timedelta(hours=1),
+    #         '1D': timedelta(days=1),
+    #     }
+    #     if obj.expiration_type == 'N':
+    #         return None
+    #     elif obj.expiration_type == 'B':
+    #         return None
+    #     expiration = expiration_delta[obj.expiration_type]
+    #
+    #     # идея: подключить redis для кэширования ссылки вместо постоянного запроса новой
+    #     time_now = datetime.now().timestamp()
+    #     created_time = (obj.created_at + expiration).timestamp()
+    #     if time_now < created_time:
+    #         return self.get_expiration_seconds(obj)
+
 
 # class StrObjectMixin(SingleObjectMixin):
 #     str_field = 'data'
