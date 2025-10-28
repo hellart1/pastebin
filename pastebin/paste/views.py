@@ -2,6 +2,8 @@ import datetime
 import os
 import requests
 from datetime import timedelta, datetime
+
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import model_to_dict
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404
@@ -65,17 +67,38 @@ class User_text(DetailView):
             ).json()
             print(response)
 
-            if 'download_url' not in response:
-                print('Нет download_url в json ответе')
-                raise Http404
-            else:
-                content = requests.get(response['download_url'])
-                if content.status_code == 200:
-                    return content.text
-                else:
-                    raise Http404
+            content = requests.get(response['download_url'])
+            if content.status_code == 200:
+                return content.text
+
         except Exception as e:
             print(f'Ошибка: {e}')
+            raise Http404
+
+
+class EditPaste(LoginRequiredMixin, S3UtilsMixin, FormView):
+    login_url = reverse_lazy('users:login')
+    form_class = TextForm
+    template_name = 'paste/edit_paste.html'
+    context_object_name = 'data'
+
+    def get_success_url(self):
+        return reverse_lazy('user_text', kwargs={'data': self.kwargs.get('data')})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['hash'] = self.kwargs.get('data')
+
+        return context
+
+    def form_valid(self, form):
+
+        self.put_object_in_s3(
+            file_hash=self.kwargs.get('data'),
+            text=form.cleaned_data['paste_text']
+        )
+
+        return super().form_valid(form)
 
 
 class PasteAPIList(PasteExpirationMixin, generics.RetrieveAPIView):

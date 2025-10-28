@@ -79,6 +79,7 @@ class PasteExpirationMixin(S3UtilsMixin):
         return self.create_presigned_url(object_name=obj.hash)
 
     def handler_burn_after_read(self, obj):
+        # идея выдавать ссылку и при открытии ее обнулять (каким образом?) (счетчик?)
         pass
 
     def handler_timed_expire(self, obj):
