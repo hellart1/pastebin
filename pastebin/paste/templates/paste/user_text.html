@@ -4,13 +4,17 @@
 <div class="container">
     <div class="text-display">
         <h2 class="text-title">Ваш Paste</h2>
-
+        <div class="text-btn">
+            <a href="{% url 'edit_paste' hash %}">Edit</a>
+        </div>
         <div class="text-content">
 <!--            <textarea class="user_text" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';" readonly>-->
 <!--                {{ post }}-->
 <!--            </textarea>-->
             {{ post }}
         </div>
+        {% if user.is_authenticated %}
+        {% endif %}
     </div>
 </div>
 {% endblock %}

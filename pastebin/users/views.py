@@ -9,16 +9,9 @@ from django.views.generic import CreateView
 from .forms import RegisterForm, LoginForm
 
 
-# def signup(request):
-#     if request.method == 'POST':
-#         form = RegisterForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('users:login')
-#     else:
-#         form = RegisterForm()
-#
-#     return render(request, 'users/signup.html', {'form': form})
+class LoginUser(LoginView):
+    form_class = LoginForm
+    template_name = "users/login.html"
 
 
 class RegisterUser(CreateView):
@@ -28,26 +21,7 @@ class RegisterUser(CreateView):
     def get_success_url(self):
         return reverse_lazy('home')
 
-def register_user(request):
-    if request.method == 'POST':
-        form = RegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.save()
-
-            return redirect('users:login')
-    else:
-        form = RegisterForm()
-
-    return render(request, 'users/signup.html', {'form': form})
-
 
 def logout_user(request):
     logout(request)
     return HttpResponseRedirect(reverse('home'))
-
-
-class LoginUser(LoginView):
-    form_class = LoginForm
-    template_name = "users/login.html"

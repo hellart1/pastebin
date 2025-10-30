@@ -38,9 +38,6 @@ class Home(S3UtilsMixin, FormView):
         paste_text = form.cleaned_data['paste_text']
         self.paste_hash = get_unique_hash()
         # max_size = 10 * 1024 * 10244
-        lifespan = form.cleaned_data['expiration']
-        # lifespan = 10
-        print(self.paste_hash, lifespan)
 
         self.put_object_in_s3(
             file_hash=self.paste_hash,
@@ -48,7 +45,11 @@ class Home(S3UtilsMixin, FormView):
         )
         print('put_object_in_s3')
 
-        self.model.objects.create(hash=self.paste_hash, expiration_type=lifespan)
+        self.model.objects.create(
+            hash=self.paste_hash,
+            expiration_type=form.cleaned_data['expiration'],
+            user_id=self.request.user.id
+        )
         print('создался обьект в бд')
         return super().form_valid(form)
 
@@ -57,6 +58,12 @@ class User_text(DetailView):
     model = Paste
     template_name = "paste/user_text.html"
     context_object_name = 'post'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['hash'] = self.kwargs.get('data')
+
+        return context
 
     def get_object(self, queryset=None):
         endpoint = reverse('paste_api', kwargs={'hash': self.kwargs.get('data')})

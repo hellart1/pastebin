@@ -97,6 +97,7 @@ html {
     display: block;
 }
 
-
-
-
+.text-btn {
+    text-align: right;
+    width: 1200px;
+}
