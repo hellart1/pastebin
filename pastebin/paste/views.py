@@ -98,6 +98,7 @@ class EditPaste(LoginRequiredMixin, S3UtilsMixin, FormView):
 
         return context
 
+    # если буду добавлять изменение продолжительности пасты то надо добавлять через patch запрос
     def form_valid(self, form):
 
         self.put_object_in_s3(
