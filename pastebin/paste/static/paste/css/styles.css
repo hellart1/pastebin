@@ -97,6 +97,33 @@ html {
     display: block;
 }
 
+.text-display {
+background: white;
+width: 100%;
+padding: 30px 40px;
+border-radius: 10px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
 
 
+.text-title {
+font-size: 2rem;
+margin-bottom: 25px;
+}
 
+
+.text-btn {
+margin-bottom: 15px;
+}
+
+
+.text-content {
+background: #fafafa;
+border: 1px solid #ddd;
+padding: 20px;
+border-radius: 8px;
+font-size: 1.25rem;
+white-space: pre-wrap;
+text-align: left;
+line-height: 1.5;
+}

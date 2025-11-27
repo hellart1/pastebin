@@ -2,8 +2,10 @@ import os
 from datetime import timedelta, datetime
 
 import boto3
+import redis
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.core.cache import cache
 from django.views.generic.detail import SingleObjectMixin
 from rest_framework.response import Response
 
@@ -62,6 +64,22 @@ class S3UtilsMixin(S3ConnectMixin):
 
 
 class PasteExpirationMixin(S3UtilsMixin):
+    def get_or_set_cache(self, obj, expiration_type=None):
+        try:
+            key = obj.hash
+            raw = cache.get(key)
+            if raw is not None:
+                return raw
+            url = self.create_presigned_url(
+                object_name=obj.hash,
+                expiration=expiration_type
+            )
+            cache.set(key, url, timeout=30)
+            print(cache.client.get_client().keys('*'))
+            return url
+        except Exception as e:
+            print('ошибка кэширования:', e)
+
     def expiration_handler(self, obj):
         handlers = {
             'N': self.handler_never_expire,
@@ -76,7 +94,7 @@ class PasteExpirationMixin(S3UtilsMixin):
             return handler(obj)
 
     def handler_never_expire(self, obj):
-        return self.create_presigned_url(object_name=obj.hash)
+        return self.get_or_set_cache(obj)
 
     def handler_burn_after_read(self, obj):
         # идея выдавать ссылку и при открытии ее обнулять (каким образом?) (счетчик?)
@@ -91,19 +109,14 @@ class PasteExpirationMixin(S3UtilsMixin):
 
         expiration = expiration_delta[obj.expiration_type].total_seconds()
 
-        # идея: подключить redis для кэширования ссылки вместо постоянного запроса новой
         time_now = datetime.now().timestamp()
         created_time = obj.created_at.timestamp()
 
         if time_now < (created_time + expiration):
             lifespan_remain = created_time + expiration - time_now
-            return self.create_presigned_url(
-                object_name=obj,
-                expiration=lifespan_remain
-            )
+            return self.get_or_set_cache(obj, lifespan_remain)
         else:
             print('Срок действия пасты истек')
-            return Response(status=404)
 
     def get_expiration_seconds(self, obj):
         expiration_delta = {
@@ -117,38 +130,3 @@ class PasteExpirationMixin(S3UtilsMixin):
         time_now = datetime.now().timestamp()
 
         return created_time + expiration.total_seconds() - time_now
-
-
-
-    # def check_expired(self, obj):
-    #     expiration_delta = {
-    #         '10M': timedelta(minutes=10),
-    #         '1H': timedelta(hours=1),
-    #         '1D': timedelta(days=1),
-    #     }
-    #     if obj.expiration_type == 'N':
-    #         return None
-    #     elif obj.expiration_type == 'B':
-    #         return None
-    #     expiration = expiration_delta[obj.expiration_type]
-    #
-    #     # идея: подключить redis для кэширования ссылки вместо постоянного запроса новой
-    #     time_now = datetime.now().timestamp()
-    #     created_time = (obj.created_at + expiration).timestamp()
-    #     if time_now < created_time:
-    #         return self.get_expiration_seconds(obj)
-
-
-# class StrObjectMixin(SingleObjectMixin):
-#     str_field = 'data'
-#
-#     def get_object(self, queryset=None):
-#         if queryset is None:
-#             queryset = self.get_queryset()
-#
-#         str = self.kwargs.get(self.str_field)
-#
-#         if not str:
-#             raise AttributeError("Str is required to get an object")
-#
-#         return queryset.filter(**{self.str_field: str}).get()
